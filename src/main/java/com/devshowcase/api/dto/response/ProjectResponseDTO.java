@@ -15,13 +15,15 @@ public class ProjectResponseDTO {
     private String liveUrl;
     private Long profileId;
     private String profileName;
+    private Integer upvotes = 0;
+    private Double averageRating = 0.0;
     private List<TechnologyResponseDTO> technologies = new ArrayList<>();
     private List<FeedbackResponseDTO> feedbacks = new ArrayList<>();
 
     public ProjectResponseDTO() {
     }
 
-    public ProjectResponseDTO(Long id, String title, String description, String repositoryUrl, String liveUrl, Long profileId, String profileName, List<TechnologyResponseDTO> technologies, List<FeedbackResponseDTO> feedbacks) {
+    public ProjectResponseDTO(Long id, String title, String description, String repositoryUrl, String liveUrl, Long profileId, String profileName, Integer upvotes, Double averageRating, List<TechnologyResponseDTO> technologies, List<FeedbackResponseDTO> feedbacks) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -29,6 +31,8 @@ public class ProjectResponseDTO {
         this.liveUrl = liveUrl;
         this.profileId = profileId;
         this.profileName = profileName;
+        this.upvotes = upvotes != null ? upvotes : 0;
+        this.averageRating = averageRating != null ? averageRating : 0.0;
         if (technologies != null) this.technologies = technologies;
         if (feedbacks != null) this.feedbacks = feedbacks;
     }
@@ -55,6 +59,8 @@ public class ProjectResponseDTO {
                 entity.getLiveUrl(),
                 profileId,
                 profileName,
+                entity.getUpvotes(),
+                entity.getAverageRating(),
                 techDtos,
                 feedbackDtos
         );
@@ -130,5 +136,21 @@ public class ProjectResponseDTO {
 
     public void setFeedbacks(List<FeedbackResponseDTO> feedbacks) {
         this.feedbacks = feedbacks;
+    }
+
+    public Integer getUpvotes() {
+        return upvotes;
+    }
+
+    public void setUpvotes(Integer upvotes) {
+        this.upvotes = upvotes;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        this.averageRating = averageRating;
     }
 }

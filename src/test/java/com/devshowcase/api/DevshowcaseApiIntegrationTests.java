@@ -1,5 +1,6 @@
 package com.devshowcase.api;
 
+import com.devshowcase.api.dto.request.FeedbackRequestDTO;
 import com.devshowcase.api.dto.request.ProfileRequestDTO;
 import com.devshowcase.api.dto.request.ProjectRequestDTO;
 import com.devshowcase.api.dto.request.TechnologyRequestDTO;
@@ -9,12 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -144,18 +145,41 @@ public class DevshowcaseApiIntegrationTests {
         );
 
         // POST /api/projects -> 201 Created
-        mockMvc.perform(post("/api/projects")
+        String projectRes = mockMvc.perform(post("/api/projects")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(projectReq)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("DevShowcase API"))
                 .andExpect(jsonPath("$.profileId").value(profileId))
-                .andExpect(jsonPath("$.technologies[0].name").value("Java"));
+                .andExpect(jsonPath("$.technologies[0].name").value("Java"))
+                .andExpect(jsonPath("$.upvotes").value(0))
+                .andExpect(jsonPath("$.averageRating").value(0.0))
+                .andReturn().getResponse().getContentAsString();
 
-        // GET /api/projects -> 200 OK
-        mockMvc.perform(get("/api/projects"))
+        Long projectId = objectMapper.readTree(projectRes).get("id").asLong();
+
+        // GET /api/projects (Paginated) -> 200 OK
+        mockMvc.perform(get("/api/projects?page=0&size=10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists());
+
+        // GET /api/projects/{id} -> 200 OK
+        mockMvc.perform(get("/api/projects/" + projectId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(projectId))
+                .andExpect(jsonPath("$.title").value("DevShowcase API"));
+
+        // GET /api/projects/99999 -> 404 Not Found
+        mockMvc.perform(get("/api/projects/99999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Projeto não encontrado com o id: 99999"));
+
+        // GET /api/projects with Technology filter -> 200 OK
+        mockMvc.perform(get("/api/projects?technologyId=" + techId + "&page=0&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
 
         // Project with non-existent Profile -> 404 Not Found
         ProjectRequestDTO orphanProject = new ProjectRequestDTO(
@@ -170,5 +194,45 @@ public class DevshowcaseApiIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orphanProject)))
                 .andExpect(status().isNotFound());
+
+        // Upvote -> PUT /api/projects/{id}/upvote -> 200 OK
+        mockMvc.perform(put("/api/projects/" + projectId + "/upvote"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.upvotes").value(1));
+
+        // Upvote non-existent project -> 404
+        mockMvc.perform(put("/api/projects/99999/upvote"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+
+        // Add Feedback -> POST /api/projects/{id}/feedbacks -> 201 Created
+        FeedbackRequestDTO feedbackReq = new FeedbackRequestDTO("Avaliador", "Excelente projeto!", 5);
+        mockMvc.perform(post("/api/projects/" + projectId + "/feedbacks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(feedbackReq)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.rating").value(5))
+                .andExpect(jsonPath("$.comment").value("Excelente projeto!"));
+
+        // Add Feedback invalid rating (>5) -> 400 Bad Request
+        FeedbackRequestDTO invalidFeedbackReq = new FeedbackRequestDTO("Avaliador", "Nota inválida", 10);
+        mockMvc.perform(post("/api/projects/" + projectId + "/feedbacks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidFeedbackReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        // Add Feedback non-existent project -> 404 Not Found
+        mockMvc.perform(post("/api/projects/99999/feedbacks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(feedbackReq)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void testOpenApiDocsAvailable() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk());
     }
 }

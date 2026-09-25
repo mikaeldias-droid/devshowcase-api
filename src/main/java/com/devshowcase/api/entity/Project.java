@@ -49,6 +49,12 @@ public class Project {
     )
     private Set<Technology> technologies = new HashSet<>();
 
+    @Column(nullable = false)
+    private Integer upvotes = 0;
+
+    @Column(nullable = false)
+    private Double averageRating = 0.0;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Feedback> feedbacks = new ArrayList<>();
 
@@ -62,6 +68,8 @@ public class Project {
         this.repositoryUrl = repositoryUrl;
         this.liveUrl = liveUrl;
         this.profile = profile;
+        this.upvotes = 0;
+        this.averageRating = 0.0;
     }
 
     public Long getId() {
@@ -126,5 +134,21 @@ public class Project {
 
     public void setFeedbacks(List<Feedback> feedbacks) {
         this.feedbacks = feedbacks;
+    }
+
+    public Integer getUpvotes() {
+        return upvotes;
+    }
+
+    public void setUpvotes(Integer upvotes) {
+        this.upvotes = upvotes;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        this.averageRating = averageRating;
     }
 }
